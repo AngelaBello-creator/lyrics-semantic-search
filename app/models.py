@@ -7,5 +7,6 @@ class Song:
     artist: str
     album: str
     year: int
+    genre: str
     language: str
     lyrics: str
