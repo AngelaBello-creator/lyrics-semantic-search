@@ -14,16 +14,18 @@ app = FastAPI(
 search_engine = LyricsVectorSearch()
 
 
-@app.on_event("startup")
-def startup_event():
+def initialize_search_engine() -> None:
     songs = load_lyrics_from_folder(DATA_FOLDER)
 
     if not songs:
         raise RuntimeError("No songs found in the data folder.")
 
-    search_engine.load_documents(songs)
-    search_engine.create_embeddings()
-    search_engine.build_index()
+    search_engine.initialize(songs)
+
+
+@app.on_event("startup")
+def startup_event():
+    initialize_search_engine()
 
 
 @app.get("/health")

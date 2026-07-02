@@ -1,10 +1,11 @@
 import logging
+from pathlib import Path
 
 import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-from app.config import MODEL_NAME
+from app.config import INDEX_FILE, MODEL_NAME
 from app.models import Song
 from app.schemas import SearchResult
 
@@ -42,6 +43,39 @@ class LyricsVectorSearch:
         self.index.add(self.embeddings)
 
         logger.info("FAISS index created with %s vectors.", self.index.ntotal)
+
+    def save_index(self) -> None:
+        if self.index is None:
+            raise ValueError("FAISS index has not been created.")
+
+        index_path = Path(INDEX_FILE)
+        index_path.parent.mkdir(parents=True, exist_ok=True)
+
+        faiss.write_index(self.index, str(index_path))
+
+        logger.info("FAISS index saved to %s", index_path)
+
+    def load_index(self) -> bool:
+        index_path = Path(INDEX_FILE)
+
+        if not index_path.exists():
+            logger.info("No existing FAISS index found.")
+            return False
+
+        self.index = faiss.read_index(str(index_path))
+
+        logger.info("FAISS index loaded from %s", index_path)
+        return True
+
+    def initialize(self, songs: list[Song]) -> None:
+        self.load_documents(songs)
+
+        if self.load_index():
+            return
+
+        self.create_embeddings()
+        self.build_index()
+        self.save_index()
 
     def search(self, query: str, num_results: int = 3) -> list[SearchResult]:
         if self.index is None:
