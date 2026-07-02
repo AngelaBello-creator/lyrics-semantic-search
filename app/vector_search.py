@@ -3,34 +3,44 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 
 from app.config import MODEL_NAME
+from app.models import Song
 
 
 class LyricsVectorSearch:
     def __init__(self):
         self.model = SentenceTransformer(MODEL_NAME)
-        self.songs = []
+        self.songs: list[Song] = []
         self.embeddings = None
         self.index = None
 
-    def load_documents(self, songs: list[dict]) -> None:
+    def load_documents(self, songs: list[Song]) -> None:
         self.songs = songs
 
-    def process_documents(self) -> None:
+    def create_embeddings(self) -> None:
         if not self.songs:
             raise ValueError("No songs loaded.")
 
-        lyrics = [song["lyrics"] for song in self.songs]
+        lyrics = [song.lyrics for song in self.songs]
 
         embeddings = self.model.encode(lyrics)
         self.embeddings = np.array(embeddings).astype("float32")
 
+        print(f"Created embeddings with shape: {self.embeddings.shape}")
+
+    def build_index(self) -> None:
+        if self.embeddings is None:
+            raise ValueError("Embeddings have not been created.")
+
         dimension = self.embeddings.shape[1]
+
         self.index = faiss.IndexFlatL2(dimension)
         self.index.add(self.embeddings)
 
+        print(f"FAISS index created with {self.index.ntotal} vectors.")
+
     def search(self, query: str, num_results: int = 3) -> list[dict]:
         if self.index is None:
-            raise ValueError("The FAISS index has not been created yet.")
+            raise ValueError("FAISS index has not been created.")
 
         query_embedding = self.model.encode([query])
         query_embedding = np.array(query_embedding).astype("float32")
@@ -43,10 +53,14 @@ class LyricsVectorSearch:
             song = self.songs[index]
 
             results.append({
-                "title": song["title"],
-                "filename": song["filename"],
+                "title": song.title,
+                "artist": song.artist,
+                "album": song.album,
+                "year": song.year,
+                "genre": song.genre,
+                "language": song.language,
                 "score": float(distance),
-                "lyrics_preview": song["lyrics"][:250]
+                "lyrics_preview": song.lyrics[:250]
             })
 
         return results
