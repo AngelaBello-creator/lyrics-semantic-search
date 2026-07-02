@@ -1,9 +1,14 @@
+import logging
+
 import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
 from app.config import MODEL_NAME
 from app.models import Song
+from app.schemas import SearchResult
+
+logger = logging.getLogger(__name__)
 
 
 class LyricsVectorSearch:
@@ -25,7 +30,7 @@ class LyricsVectorSearch:
         embeddings = self.model.encode(lyrics)
         self.embeddings = np.array(embeddings).astype("float32")
 
-        print(f"Created embeddings with shape: {self.embeddings.shape}")
+        logger.info("Created embeddings with shape %s", self.embeddings.shape)
 
     def build_index(self) -> None:
         if self.embeddings is None:
@@ -36,9 +41,9 @@ class LyricsVectorSearch:
         self.index = faiss.IndexFlatL2(dimension)
         self.index.add(self.embeddings)
 
-        print(f"FAISS index created with {self.index.ntotal} vectors.")
+        logger.info("FAISS index created with %s vectors.", self.index.ntotal)
 
-    def search(self, query: str, num_results: int = 3) -> list[dict]:
+    def search(self, query: str, num_results: int = 3) -> list[SearchResult]:
         if self.index is None:
             raise ValueError("FAISS index has not been created.")
 
@@ -52,15 +57,17 @@ class LyricsVectorSearch:
         for distance, index in zip(distances[0], indices[0]):
             song = self.songs[index]
 
-            results.append({
-                "title": song.title,
-                "artist": song.artist,
-                "album": song.album,
-                "year": song.year,
-                "genre": song.genre,
-                "language": song.language,
-                "score": float(distance),
-                "lyrics_preview": song.lyrics[:250]
-            })
+            results.append(
+                SearchResult(
+                    title=song.title,
+                    artist=song.artist,
+                    album=song.album,
+                    year=song.year,
+                    genre=song.genre,
+                    language=song.language,
+                    score=float(distance),
+                    lyrics_preview=song.lyrics[:250],
+                )
+            )
 
         return results

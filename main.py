@@ -1,17 +1,22 @@
-from app.loader import load_lyrics_from_folder
-from app.vector_search import LyricsVectorSearch
+import logging
+
+import uvicorn
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("faiss").setLevel(logging.WARNING)
+logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
+logging.getLogger("huggingface_hub").setLevel(logging.WARNING)
 
 
-songs = load_lyrics_from_folder("data")
-
-search_engine = LyricsVectorSearch()
-search_engine.load_documents(songs)
-search_engine.create_embeddings()
-search_engine.build_index()
-
-results = search_engine.search("songs about jealousy and obsession", num_results=3)
-
-for result in results:
-    print(result["title"], "-", result["artist"], "| score:", result["score"])
-    print(result["lyrics_preview"])
-    print("-" * 80)
+if __name__ == "__main__":
+    uvicorn.run(
+        "app.api:app",
+        host="127.0.0.1",
+        port=8000,
+        reload=True,
+    )

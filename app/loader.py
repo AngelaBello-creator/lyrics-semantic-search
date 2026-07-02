@@ -1,6 +1,9 @@
+import logging
 from pathlib import Path
 
 from app.models import Song
+
+logger = logging.getLogger(__name__)
 
 
 def load_lyrics_from_folder(folder_path: str) -> list[Song]:
@@ -15,6 +18,8 @@ def load_lyrics_from_folder(folder_path: str) -> list[Song]:
 
         song = parse_song_file(content)
         songs.append(song)
+
+    logger.info("Loaded %s songs.", len(songs))
 
     return songs
 
@@ -44,5 +49,5 @@ def parse_song_file(content: str) -> Song:
         year=int(metadata.get("year", 0)),
         genre=metadata.get("genre", "Unknown Genre"),
         language=metadata.get("language", "Unknown Language"),
-        lyrics="\n".join(lyrics_lines)
+        lyrics="\n".join(lyrics_lines),
     )
